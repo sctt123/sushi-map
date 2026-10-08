@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏轼一生足迹 · 可互动古地图</title>
+<style>
+:root{
+  --ink:#302b25; --paper:#e9dfc9; --paper2:#f4eddc; --line:#756b58;
+  --accent:#55d6d0; --gold:#b58a49; --wood:#9b6847; --gray:#9ba1a0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:"Noto Serif SC","Songti SC","STSong",serif;color:var(--ink)}
+body{
+  background:#24231f;
+}
+.app{
+  position:relative;width:100vw;height:100vh;overflow:hidden;
+  background:
+    radial-gradient(circle at 25% 30%,rgba(255,255,255,.22),transparent 28%),
+    radial-gradient(circle at 78% 72%,rgba(72,56,34,.18),transparent 32%),
+    linear-gradient(135deg,#d8cbb0,#eee4cf 48%,#cbbd9e);
+  transition:background .8s ease;
+}
+.app::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.32;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+}
+.header{position:absolute;z-index:10;left:42px;top:30px;max-width:440px}
+.kicker{font-size:12px;letter-spacing:5px;opacity:.65;margin-bottom:8px}
+h1{margin:0;font-size:35px;letter-spacing:3px;font-weight:600}
+.subtitle{margin-top:8px;font-size:13px;opacity:.65;letter-spacing:1px}
+.stage-tag{
+  position:absolute;z-index:10;right:34px;top:30px;
+  padding:10px 16px;border:1px solid rgba(48,43,37,.35);background:rgba(244,237,220,.56);
+  backdrop-filter:blur(8px);font-size:13px;letter-spacing:2px;
+}
+.map-wrap{position:absolute;inset:100px 285px 42px 35px;display:flex;align-items:center;justify-content:center}
+.map{
+  position:relative;width:min(100%,1120px);height:min(100%,760px);
+  filter:drop-shadow(0 18px 25px rgba(54,42,24,.2));
+}
+.map svg{width:100%;height:100%;display:block}
+.rivers{fill:none;stroke:#8ca5a0;stroke-width:3;opacity:.58}
+.coast{fill:#ded3b9;stroke:#665d4c;stroke-width:2}
+.mountains{fill:#b4a68a;opacity:.36}
+.route{fill:none;stroke:#765e43;stroke-width:2.5;stroke-dasharray:6 7;opacity:.65}
+.route.active{stroke:var(--accent);stroke-width:4;opacity:1;filter:drop-shadow(0 0 5px rgba(85,214,208,.6))}
+.city{cursor:pointer}
+.city circle.outer{fill:rgba(247,239,217,.75);stroke:#4d4437;stroke-width:2}
+.city circle.core{fill:var(--wood);stroke:#fff0cf;stroke-width:2}
+.city:hover circle.core,.city.active circle.core{fill:var(--accent);stroke:#fff;filter:drop-shadow(0 0 9px rgba(85,214,208,.8))}
+.city text{font-size:16px;fill:#302b25;font-weight:600;paint-order:stroke;stroke:#eee3c9;stroke-width:5px;stroke-linejoin:round}
+.city .year{font-size:10px;fill:#665b4b;font-weight:400;stroke:none}
+.city .pulse{fill:none;stroke:var(--accent);stroke-width:2;opacity:0}
+.city.active .pulse{animation:pulse 1.7s infinite;opacity:.9}
+@keyframes pulse{0%{r:9;opacity:.9}100%{r:28;opacity:0}}
+.legend{
+  position:absolute;left:25px;bottom:18px;display:flex;gap:18px;font-size:11px;opacity:.75
+}
+.legend span{display:flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.timeline{
+  position:absolute;right:25px;top:132px;bottom:54px;width:220px;
+  background:rgba(245,238,221,.62);border-left:1px solid rgba(48,43,37,.25);
+  padding:25px 20px;backdrop-filter:blur(7px)
+}
+.timeline h3{margin:0 0 22px;font-size:15px;letter-spacing:2px}
+.track{position:relative;margin-left:24px;height:calc(100% - 45px)}
+.track::before{content:"";position:absolute;left:0;top:0;bottom:0;width:1px;background:#82755f}
+.t-item{position:relative;padding:0 0 24px 24px;cursor:pointer;transition:.2s}
+.t-item::before{content:"";position:absolute;left:-5px;top:3px;width:9px;height:9px;border-radius:50%;background:#c4b79c;border:2px solid #776b57}
+.t-item:hover,.t-item.active{transform:translateX(3px)}
+.t-item.active::before{background:var(--accent);border-color:#315e5b;box-shadow:0 0 8px rgba(85,214,208,.7)}
+.t-year{font-size:11px;opacity:.6}.t-city{font-size:14px;margin-top:2px}
+.t-desc{font-size:10px;opacity:.58;margin-top:3px}
+.progress{
+  position:absolute;right:34px;bottom:18px;font-size:11px;letter-spacing:1px;opacity:.62
+}
+.modal{
+  position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);
+  width:min(650px,calc(100vw - 40px));max-height:82vh;overflow:auto;
+  background:rgba(246,239,222,.97);border:1px solid #756b58;
+  box-shadow:0 25px 70px rgba(30,24,17,.38);opacity:0;pointer-events:none;
+  transition:.25s ease;padding:32px 36px;
+}
+.modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.close{position:absolute;right:18px;top:13px;border:0;background:none;font-size:24px;cursor:pointer;color:#554c3e}
+.modal-kicker{font-size:11px;letter-spacing:3px;opacity:.58}
+.modal h2{font-size:30px;margin:5px 0 4px}.modal .period{font-size:13px;color:#7b5b3e;margin-bottom:20px}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}.badge{border:1px solid #9d8c6d;padding:5px 10px;font-size:11px;background:#eee4ce}
+.section{border-top:1px solid rgba(80,68,49,.22);padding:16px 0}
+.section h4{margin:0 0 9px;font-size:13px;letter-spacing:1px}.section p{margin:0;line-height:1.8;font-size:14px}
+.quote{font-size:19px!important;line-height:1.9!important;font-weight:600;padding:4px 0 2px}
+.source{font-size:11px!important;opacity:.55}
+.overlay{position:absolute;inset:0;background:rgba(32,29,24,.35);z-index:20;opacity:0;pointer-events:none;transition:.25s}
+.overlay.show{opacity:1;pointer-events:auto}
+.unlock{
+  position:absolute;z-index:40;inset:0;background:rgba(30,29,25,.86);display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:.5s
+}
+.unlock.show{opacity:1;pointer-events:auto}
+.unlock-card{
+  width:min(690px,calc(100vw - 36px));text-align:center;color:#eee5d2;
+  padding:70px 40px;border:1px solid rgba(225,210,177,.45);background:rgba(45,42,36,.72);
+  box-shadow:0 0 80px rgba(0,0,0,.35)
+}
+.unlock-card .small{font-size:11px;letter-spacing:5px;opacity:.65}
+.unlock-card h2{font-size:38px;font-weight:500;letter-spacing:5px;margin:17px 0}
+.unlock-card p{line-height:2;font-size:14px;opacity:.8}
+.restart{margin-top:22px;padding:9px 20px;background:transparent;border:1px solid #bcae91;color:#eee5d2;cursor:pointer}
+.hint{
+  position:absolute;left:42px;bottom:28px;font-size:11px;opacity:.55;letter-spacing:1px
+}
+@media(max-width:900px){
+  .header{left:20px}.header h1{font-size:27px}.stage-tag{right:15px;top:28px}
+  .map-wrap{inset:95px 10px 230px 10px}.timeline{left:10px;right:10px;top:auto;bottom:8px;height:180px;width:auto;border-left:0;border-top:1px solid rgba(48,43,37,.25);overflow:hidden}
+  .track{height:115px;display:flex;margin-left:0;gap:12px;overflow-x:auto}.track::before{left:0;right:0;top:8px;bottom:auto;width:auto;height:1px}
+  .t-item{min-width:90px;padding:25px 8px 0}.t-item::before{left:7px;top:3px}
+  .legend,.hint{display:none}.progress{bottom:195px;right:15px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="header">
+    <div class="kicker">NORTHERN SONG · SU SHI'S LIFE JOURNEY</div>
+    <h1>苏轼一生足迹</h1>
+    <div class="subtitle">一张古地图，串起他的迁徙、为官、贬谪与旷达</div>
+  </header>
+  <div class="stage-tag" id="stageTag">少年求学 · 青意初生</div>
+
+  <main class="map-wrap">
+    <div class="map">
+      <svg viewBox="0 0 1000 720" aria-label="北宋苏轼足迹古地图">
+        <path class="coast" d="M110,65 C200,25 305,52 380,82 C465,115 535,83 610,112 C690,144 765,115 830,165 C900,220 866,280 913,335 C945,375 890,410 905,470 C920,540 850,565 805,625 C720,686 605,650 530,674 C440,700 365,665 286,680 C205,695 140,645 120,580 C95,510 135,458 105,390 C78,330 115,285 92,220 C68,155 74,105 110,65Z"/>
+        <path class="mountains" d="M170 140 L210 95 L240 150 L275 110 L310 170 L350 120 L380 185 L420 135 L455 205 L500 155 L545 220 L585 170 L625 230 L675 180 L715 250 L755 200 L795 275 L830 240 L865 305 L820 325 L760 290 L710 330 L650 285 L600 340 L540 300 L490 350 L430 305 L380 345 L320 300 L270 335 L220 280 L175 300 L135 245Z"/>
+        <path class="rivers" d="M120 390 C220 340 270 370 350 330 C440 285 480 330 540 370 C625 425 670 380 760 410 C825 432 850 475 895 500"/>
+        <path class="rivers" d="M305 120 C360 185 385 250 370 315 C350 390 395 445 450 505 C500 560 535 600 620 650"/>
+        <path class="rivers" d="M610 115 C580 190 615 245 660 290 C710 340 700 395 735 445 C765 490 750 540 805 610"/>
+        <path class="route" id="route" d="M170 235 C315 195 500 150 700 235 C760 270 710 335 650 380 C590 430 530 465 560 535 C610 600 720 610 820 575"/>
+        <text x="120" y="100" font-size="14" fill="#716753" opacity=".65">大宋山河 · 江南水脉</text>
+        <text x="735" y="110" font-size="12" fill="#716753" opacity=".5">东海</text>
+        <text x="505" y="665" font-size="12" fill="#716753" opacity=".5">岭南 · 南海</text>
+
+        <g class="city" data-city="眉山" transform="translate(170,235)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">眉山</text><text class="year" x="-13" y="-4">1037–1056</text>
+        </g>
+        <g class="city" data-city="开封" transform="translate(430,170)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">开封</text><text class="year" x="-18" y="-4">1057–1069</text>
+        </g>
+        <g class="city" data-city="杭州" transform="translate(700,235)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">杭州</text><text class="year" x="-19" y="-4">1071–1074</text>
+        </g>
+        <g class="city" data-city="密州" transform="translate(760,300)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">密州</text><text class="year" x="-19" y="-4">1074–1076</text>
+        </g>
+        <g class="city" data-city="徐州" transform="translate(650,380)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">徐州</text><text class="year" x="-19" y="-4">1077–1079</text>
+        </g>
+        <g class="city" data-city="黄州" transform="translate(560,535)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">黄州</text><text class="year" x="-19" y="-4">1080–1084</text>
+        </g>
+        <g class="city" data-city="惠州" transform="translate(720,610)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">惠州</text><text class="year" x="-19" y="-4">1094–1097</text>
+        </g>
+        <g class="city" data-city="儋州" transform="translate(820,575)">
+          <circle class="pulse" r="9"/><circle class="outer" r="11"/><circle class="core" r="6"/>
+          <text x="-14" y="-18">儋州</text><text class="year" x="-19" y="-4">1097–1100</text>
+        </g>
+      </svg>
+    </div>
+  </main>
+
+  <aside class="timeline">
+    <h3>足迹时间轴</h3>
+    <div class="track" id="track"></div>
+  </aside>
+  <div class="legend">
+    <span><i class="dot" style="background:#55d6d0"></i>少年求学</span>
+    <span><i class="dot" style="background:#9b6847"></i>壮年为官</span>
+    <span><i class="dot" style="background:#9ba1a0"></i>晚年贬谪</span>
+  </div>
+  <div class="hint">点击地图中的城市，阅读这一站的苏轼</div>
+  <div class="progress" id="progress">已点亮 0 / 8</div>
+
+  <div class="overlay" id="overlay"></div>
+  <section class="modal" id="modal">
+    <button class="close" id="close">×</button>
+    <div class="modal-kicker" id="mStage"></div>
+    <h2 id="mCity"></h2>
+    <div class="period" id="mPeriod"></div>
+    <div class="badges"><span class="badge" id="mState"></span><span class="badge" id="mRole"></span></div>
+    <div class="section"><h4>当地生活</h4><p id="mLife"></p></div>
+    <div class="section"><h4>代表作 · 名句</h4><p class="quote" id="mQuote"></p><p class="source" id="mSource"></p></div>
+    <div class="section"><h4>心境变化</h4><p id="mMind"></p></div>
+  </section>
+
+  <section class="unlock" id="unlock">
+    <div class="unlock-card">
+      <div class="small">EIGHT STATIONS · ONE LIFE</div>
+      <h2>苏轼一生：半生漂泊，半生豁达</h2>
+      <p>从眉山到儋州，他走过山河，也走过自己。<br>
+      少年有锋芒，壮年有担当，困顿时仍能把日子过成诗。<br>
+      地图上的八个坐标，最终汇成一个答案：<br><strong>身在何处并不由己，如何面对，却始终可以选择。</strong></p>
+      <button class="restart" id="restart">重新走一遍</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const cities={
+"眉山":{stage:"少年求学",stageDesc:"青意初生",period:"1037—1056 · 出生、成长与求学",state:"少年求学",role:"故乡",life:"生于眉山，成长于书香之家。父亲苏洵重视教育，母亲程氏亲自教诲。少年苏轼在这里打下经史与文章的根基，也形成了日后乐观、通达的性情底色。",quote:"“发奋识遍天下字，立志读尽人间书。”",source:"—— 传统题刻所传读书联，常被用来概括苏轼少年求学志向",mind:"这是“向外生长”的阶段：眼里是功名与文章，心里是对世界的好奇。后来纵然颠沛，这份少年气始终没有消失。"},
+"开封":{stage:"少年求学",stageDesc:"青意初生",period:"1057—1069 · 入京应试、进士及第",state:"初入仕途",role:"进士 / 官员",life:"嘉祐二年高中进士，名动京师。此后进入仕途，在朝中与地方之间往来，逐渐从“文章才子”变成真正面对现实政治与民生的官员。",quote:"“万人如海一身藏。”",source:"—— 《病中闻子由得告不赴商州三首》其一",mind:"从故乡少年走进帝国中心，他开始发现：文章可以赢得声名，却未必能改变复杂的现实。理想与政治之间的距离，开始出现。"},
+"杭州":{stage:"壮年为官",stageDesc:"暖木成荫",period:"1071—1074 · 通判杭州",state:"为民 / 闲适",role:"杭州通判",life:"初到杭州，面对西湖、江潮与民生。他常巡查水利、赈济灾民，也在闲暇中游湖写诗。公务与山水交织，形成了苏轼极具代表性的“为官而不失生活”。",quote:"“欲把西湖比西子，淡妆浓抹总相宜。”",source:"—— 《饮湖上初晴后雨二首》其二",mind:"这一阶段的苏轼仍有强烈的行动力。他相信官职可以用来做实事，也相信人在忙碌之外应该拥有审美与快乐。"},
+"密州":{stage:"壮年为官",stageDesc:"暖木成荫",period:"1074—1076 · 知密州",state:"为民 / 豪迈",role:"密州知州",life:"任密州知州期间，面对旱灾、蝗灾等问题，亲自处理政务。与此同时，他纵马射猎、登台望远，把地方官的责任与个人的豪情写进诗词。",quote:"“会挽雕弓如满月，西北望，射天狼。”",source:"—— 《江城子·密州出猎》",mind:"这里的苏轼意气最盛：既有“老夫聊发少年狂”的豪迈，也有想以才干报国的热望。现实的压力尚未磨掉他的锋芒。"},
+"徐州":{stage:"壮年为官",stageDesc:"暖木成荫",period:"1077—1079 · 知徐州",state:"为民 / 担当",role:"徐州知州",life:"黄河决口、水患逼近徐州时，他亲自参与抗洪，组织军民筑堤护城。危急之中，他把地方官的职责落实成具体行动，深受百姓爱戴。",quote:"“百年未见水潦，今岁一作，几无遗类。”",source:"—— 徐州治水时期文献所见忧民心态",mind:"在徐州，他第一次真正经历“以一城百姓为念”的重量。个人得失开始退到后面，“为民”成为他生命中极重要的价值坐标。"},
+"黄州":{stage:"晚年贬谪",stageDesc:"水墨渐深",period:"1080—1084 · 乌台诗案后贬黄州",state:"贬谪 / 自省",role:"团练副使（闲职）",life:"乌台诗案后谪居黄州，政治身份跌落，却意外获得了少见的自由。躬耕东坡、夜游赤壁、与友人饮酒作文，生活从“官场”转向“日常”。",quote:"“莫听穿林打叶声，何妨吟啸且徐行。”",source:"—— 《定风波·莫听穿林打叶声》",mind:"黄州是苏轼人生的转折点：他开始学会与失意共处。不是消灭风雨，而是改变自己走在风雨中的方式。“东坡”这个名字，也由此成为一种精神。"},
+"惠州":{stage:"晚年贬谪",stageDesc:"水墨渐深",period:"1094—1097 · 贬惠州",state:"贬谪 / 从容",role:"宁远军节度副使",life:"哲宗绍圣年间再度被贬岭南。惠州远离政治中心，他却继续关注百姓生活，改善饮水、桥梁等事务，同时以极强的生活能力经营日常。",quote:"“日啖荔枝三百颗，不辞长作岭南人。”",source:"—— 《惠州一绝》",mind:"处境越来越远，心却越来越宽。他已经能把“被放逐”重新解释为“与一方水土相遇”，用幽默和审美抵抗命运。"},
+"儋州":{stage:"晚年贬谪",stageDesc:"水墨渐深",period:"1097—1100 · 贬儋州",state:"贬谪 / 豁达",role:"琼州别驾 / 儋州安置",life:"渡海至海南儋州，生活条件艰苦。当地文化教育落后，他却开讲授徒，留下“东坡村”等文化记忆。这里是他仕途意义上的最远处，却成为精神意义上的高处。",quote:"“九死南荒吾不恨，兹游奇绝冠平生。”",source:"—— 《六月二十日夜渡海》",mind:"走到人生最远、最苦的一站，他反而抵达了最从容的自己。苦难没有消灭他的世界，反而让他拥有了看待世界的距离感与宽阔。"}
+};
+
+const order=["眉山","开封","杭州","密州","徐州","黄州","惠州","儋州"];
+const stageClass={
+"少年求学":{bg:"linear-gradient(135deg,#d7dfd3,#e9eadc 45%,#c7d5c9)",accent:"#55d6d0"},
+"壮年为官":{bg:"linear-gradient(135deg,#dfc8a7,#ead9bd 48%,#c6ae8e)",accent:"#9b6847"},
+"晚年贬谪":{bg:"linear-gradient(135deg,#d2d2ca,#e6e3d8 48%,#babdb8)",accent:"#9ba1a0"}
+};
+const app=document.getElementById("app"), modal=document.getElementById("modal"), overlay=document.getElementById("overlay");
+const unlocked=new Set(); let current=null;
+
+function setStage(name){
+  const c=cities[name], s=stageClass[c.stage];
+  app.style.background=s.bg;
+  document.documentElement.style.setProperty("--accent",s.accent);
+  document.getElementById("stageTag").textContent=c.stage+" · "+c.stageDesc;
+  document.querySelectorAll(".city").forEach(x=>x.classList.toggle("active",x.dataset.city===name));
+  document.querySelectorAll(".t-item").forEach(x=>x.classList.toggle("active",x.dataset.city===name));
+  const idx=order.indexOf(name);
+  document.getElementById("route").classList.toggle("active",true);
+  document.getElementById("progress").textContent=`已点亮 ${unlocked.size} / 8`;
+}
+
+function openCity(name){
+  current=name; unlocked.add(name); setStage(name);
+  const c=cities[name];
+  document.getElementById("mStage").textContent=c.stage+" · "+c.stageDesc;
+  document.getElementById("mCity").textContent=name;
+  document.getElementById("mPeriod").textContent=c.period;
+  document.getElementById("mState").textContent=c.state;
+  document.getElementById("mRole").textContent=c.role;
+  document.getElementById("mLife").textContent=c.life;
+  document.getElementById("mQuote").textContent=c.quote;
+  document.getElementById("mSource").textContent=c.source;
+  document.getElementById("mMind").textContent=c.mind;
+  modal.classList.add("show"); overlay.classList.add("show");
+  document.getElementById("progress").textContent=`已点亮 ${unlocked.size} / 8`;
+}
+function closeModal(){
+  modal.classList.remove("show");overlay.classList.remove("show");
+  if(unlocked.size===8) setTimeout(()=>document.getElementById("unlock").classList.add("show"),260);
+}
+document.querySelectorAll(".city").forEach(el=>el.addEventListener("click",()=>openCity(el.dataset.city)));
+document.getElementById("close").onclick=closeModal;
+overlay.onclick=closeModal;
+
+const track=document.getElementById("track");
+order.forEach((name,i)=>{
+  const c=cities[name];
+  const d=document.createElement("div");d.className="t-item";d.dataset.city=name;
+  d.innerHTML=`<div class="t-year">${c.period.split(" · ")[0]}</div><div class="t-city">${name}</div><div class="t-desc">${c.stage}</div>`;
+  d.onclick=()=>{openCity(name);document.querySelector(`.city[data-city="${name}"]`).scrollIntoView?.()};
+  track.appendChild(d);
+});
+document.getElementById("restart").onclick=()=>{
+  unlocked.clear();
+  document.getElementById("unlock").classList.remove("show");
+  document.querySelectorAll(".city,.t-item").forEach(x=>x.classList.remove("active"));
+  app.style.background="linear-gradient(135deg,#d8cbb0,#eee4cf 48%,#cbbd9e)";
+  document.getElementById("stageTag").textContent="八站足迹 · 点击城市开始";
+  document.getElementById("progress").textContent="已点亮 0 / 8";
+};
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){modal.classList.remove("show");overlay.classList.remove("show");document.getElementById("unlock").classList.remove("show")}
+});
+</script>
+</body>
+</html>
